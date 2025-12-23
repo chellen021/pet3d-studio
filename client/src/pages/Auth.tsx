@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import Footer from "@/components/Footer";
 
 export default function Auth() {
   const [, setLocation] = useLocation();
-  const { signIn, signUp, isAuthenticated } = useAuth();
+  const { signIn, signUp, isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   
   // Login form state
@@ -26,10 +26,29 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated - use useEffect to avoid render-phase navigation
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      setLocation("/dashboard");
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If authenticated, show loading while redirecting
   if (isAuthenticated) {
-    setLocation("/dashboard");
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,12 +59,11 @@ export default function Auth() {
     
     if (error) {
       toast.error(error.message || "Login failed");
+      setLoading(false);
     } else {
       toast.success("Welcome back!");
-      setLocation("/dashboard");
+      // Navigation will happen via useEffect when isAuthenticated changes
     }
-    
-    setLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent) => {

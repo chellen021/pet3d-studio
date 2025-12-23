@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Upload,
@@ -21,21 +21,25 @@ import {
 export default function Dashboard() {
   const { profile, isAuthenticated, loading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [redirecting, setRedirecting] = useState(false);
 
   const { data: models, isLoading: modelsLoading } = trpc.models.list.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !authLoading,
   });
 
   const { data: orders, isLoading: ordersLoading } = trpc.orders.list.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !authLoading,
   });
 
+  // Handle redirect in useEffect to avoid render-phase navigation
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
+      setRedirecting(true);
       setLocation("/auth");
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, setLocation]);
 
+  // Show loading while checking auth state
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -44,8 +48,13 @@ export default function Dashboard() {
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
+  // Show loading while redirecting to auth
+  if (!isAuthenticated || redirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const stats = [
